@@ -1,0 +1,158 @@
+<!DOCTYPE html>
+<html lang="sl">
+<head>
+  <link href="new.css" media="screen" rel="stylesheet" />
+  <meta charset="utf-8" />
+  <meta content="Informacije o uporabi pretvornika FFmpeg" name="description" />
+  <title>FFmpeg</title>
+</head>
+<body>
+
+<article>
+
+<h1>FFmpeg</h1>
+
+<p>Program <a href="https://ffmpeg.org/" class="ssl">FFmpeg</a> se za Windows sisteme lahko prenese s spletnega mesta:
+<ul>
+  <li><a href="http://ffmpeg.zeranoe.com/builds/win32/static/?C=M;O=D">http://ffmpeg.zeranoe.com/builds/</a> vsebuje <dfn>libx264</dfn> <em>(4/27/2014)</em></li>
+  <li><s>http://ffmpeg.arrozcru.org/autobuilds/</s> (stran ne obstaja več)</li>
+  <li><s>http://ffdshow.faireal.net/mirror/ffmpeg/</s> (stran ne obstaja več)</li>
+</ul>
+
+<p>Zagon in uporaba poteka preko ukazne vrstice sistema <samp>cmd</samp>.</p>
+
+<p>Pri sistemoma <a href="debian.htm#debian">Debian</a> in <a 
+href="debian.htm#ubuntu">Ubuntu</a> paket <a 
+href="http://packages.ubuntu.com/search?keywords=ffmpeg"><dfn>ffmpeg</dfn></a> 
+ne namesti več programa ffmpeg, temveč njegovo odcepitev <a 
+href="#libav"><dfn>libav</dfn></a>, zato lahko spodnji ukazi ne delujejo željeno.</p>
+
+<h3>Uporaba</h3>
+
+<h4>Pretvarjanje iz poljubnega formata v mp4 za predvajanje na spletu</h4>
+<p>slika: AVC <ins>MPEG 4 Part 10</ins>, zvok: AAC <ins>MPEG 4 Part 3</ins>, ovitek: mp4 <ins>MPEG 4 Part 12</ins>, glej <a href="#opomba1">opombo</a></p>
+<code>ffmpeg -i video.avi -acodec aac -ab 128k -ac 2 -ar 44100 -vcodec libx264 -b 700k -f mp4 video.mp4</code>
+
+<h4>Pretvarjanje iz avi (Video for Windows) v flv (Flash Video)</h4>
+<code>ffmpeg -i video.avi -acodec libmp3lame -ab 64k -ac 1 -ar 22050 -vcodec flv -b 420k video.flv</code>
+	
+<h4>Pretvarjanje iz mpg (MPEG Video 1) v avi (MPEG Video 4)</h4>
+<code>ffmpeg -i video.mpg -acodec libmp3lame -ab 96k -ar 22050 -vcodec mpeg4 -s 320x240 -b 300k -r 25 -f avi video.avi</code>
+
+<h4>Pretvarjanje iz mp4 (MPEG Video 4) v wmv (Microsoft Video)</h4>
+<code>ffmpeg -i video.mp4 -acodec wmav2 -ab 96k -ac 1 -vcodec wmv2 -b 420k video.wmv</code>
+
+<h4>Pretvarjanje iz mp4 (Youtube Video) v mp3 (MPEG Audio Layer 3)</h4>
+<pre>ffmpeg -i video.mp4 -vn -acodec libmp3lame -ab 160k avdio.mp3</pre>
+
+<h4>Pretvarjanje iz wav (Wave Audio) v ogg (OGG/Vorbis)</h4>
+<pre>ffmpeg -i rip.wav -acodec libvorbis -aq 6 avdio.ogg</pre>
+
+<h4>Izluščanje slike</h4>
+<pre>ffmpeg -i video.avi -an -vcodec copy slika.avi</pre>
+
+<h4>Izluščanje zvoka</h4>
+<pre>ffmpeg -i video.avi -acodec copy -vn zvok.mp3</pre>
+
+<h4>Združevanje slike ter zvoka</h4>
+<pre>ffmpeg -i slika.avi -i zvok.mp3 -vcodec copy -acodec copy video.avi</pre>
+
+<h4>Normalizacija zvoka</h4>
+<pre>ffmpeg -i DSC_0237.MOV -vn -acodec copy 237.wav
+normalize.exe 237.wav
+ffmpeg -i DSC_0237.MOV -i 237.wav -map 0:0 -map 1:0 -acodec copy -vcodec copy 237.MOV</pre>
+kjer je <dfn>normalize</dfn> program od <a href="https://neon1.net/prog/normalizer.html">tu</a>.
+
+<h3>Stikala</h3>
+<dl>
+  <dt>-ab 192k</dt>
+  <dd>bitna hitrost kodiranja zvoka</dd>
+  <dt>-ac 1</dt>
+  <dd>enokanalni zvok (mono)</dd>
+  <dt>-ac 2</dt>
+  <dd>dvokanalni zvok (stereo)</dd>
+  <dt>-acodec copy</dt>
+  <dd>brez pretvarjanja zvočnega zapisa</dd>
+  <dt>-acodec mp2</dt>
+  <dd>uporaba kodirnika mp2 za zvok</dd>
+  <dt>-an</dt>
+  <dd>odstrani zvok</dd>
+  <dt>-ar 44100</dt>
+  <dd>vzorčenje zvoka</dd>
+  <dt>-aq 6</dt>
+  <dd>kvaliteta zvoka, enaka vloga kot -ab</dd>
+  <dt>-aspect 4:3</dt>
+  <dd>razmerje stranic slike</dd>
+  <dt>-b 300k</dt>
+  <dd>bitna hitrost kodiranja slike</dd>
+  <dt>-f vob</dt>
+  <dd>vsiljevanje formata vob</dd>
+  <dt>-vcodec mpeg4</dt>
+  <dd>uporaba kodirnika mpeg4 za sliko</dd>
+  <dt>-vn</dt>
+  <dd>odstrani sliko</dd>
+  <dt>-r 25</dt>
+  <dd>število sličic na sekundo <em>(fps)</em></dd>
+  <dt>-s 320x240</dt>
+  <dd>končna velikost slike (če je izvorna slika večja, jo pomanjša)</dd>
+  <dt>-ss 33</dt>
+  <dd>začetek rezanja na 33. sekundi</dd>
+  <dt>-t 3</dt>
+  <dd>trajanje izreza 3 sekunde</dd>
+  <dt>-vf format=gray</dt>
+  <dd>izvozi sliko v obliki sivin</dd>
+</dl>
+
+<h1 id="libav">libav</h1>
+
+<img src="images/libav-logo.png" alt="libav logo" />
+
+<p>Za namestitev programa se uporabi ukaz <code>aptitude install 
+libav-tools</code></p>
+
+<h3>Uporaba</h3>
+
+<h4>Združevanje posameznih sličic</h4>
+<p>Sličice morajo biti vse enakih dimenzij ter poimenovane kot <samp>image????.jpg</samp>, pri čemer se na mestu vprašajev vrstijo števila od <samp>0001</samp> in tako naprej, vključno z vodilnimi ničlami.</p>
+<pre>avconv -r 10 -i image%04d.jpg -c:v libx264 -b 1000k -r 30 -pix_fmt yuv420p slideshow.mp4</pre>
+<p>V kolikor sličice nimajo takšnega imena, se jih lahko preimenuje oziroma „polinka“:</p>
+<pre>j=0;for i in `ls -1`; do ((j++)); ln -s "$i" "`printf "image%04d.jpg" "$j"`"; done</pre>
+
+<h4>Live video streaming from v4l2 to UDP unicast</h4>
+<pre>avconv -f video4linux2 -channel 2 -video_size 720x576 -input_format yuv420p \
+-i /dev/video0 -c:v mpeg2video -b 2000k -an -aspect 4:3 -f mpegts udp://10.82.4.12:1234</pre>
+
+<h4>Publishing video from v4l2 /dev/video0 to RTMP server</h4>
+<pre>avconv -re -f video4linux2 -channel 2 -video_size 320x240 -i /dev/video0 \
+-c:v libx264 -preset ultrafast -profile baseline -tune zerolatency -b:v 350k \
+-an -aspect 4:3 -r 25 -f flv rtmp://live-ams.twitch.tv/app/live_xxx</pre>
+
+<h3>Opombe</h3>
+
+<p id="opomba1">
+FFmpeg doda metapodatke <em>moov atom</em> na konec datoteke. Če se želi
+predvajati vsebino na spletu, je potrebno premakniti te metapodatke na začetek.
+To se stori z ukazom <code>qt-faststart input.mp4 output.mp4</code> ali s
+programom <dfn>MP4Box</dfn>. Če se metapodatkov ne premakne, se bo predvajanje
+začelo šele, ko je prenešena celotna datoteka.
+</p>
+
+<p id="opomba2">Vrednosti primerne za predvajanje v živo:</p>
+<ul>
+<li>SD 576 - AVC 3.0 3400kbps, AAC 192kpbs stereo,</li>
+<li>HD 720 - AVC 4.1 7500kbps, AAC 384kbps stereo,</li>
+<li>HD 1080 - AVC 4.1 17500kbps, AAC 384kbps stereo.</li>
+</ul>
+<p>Za arhiviranje uporabite trikrat toliko.</p>
+
+<h2>Viri</h2>
+
+<ul>
+  <li><a href="http://howto-pages.org/ffmpeg/" rel="nofollow">ffmpeg audio/video manipulation</a></li>
+  <li><a href="https://www.mplayerhq.hu/DOCS/HTML/en/menc-feat-vcd-dvd.html" rel="nofollow" class="ssl">Using MEncoder to create VCD/SVCD/DVD-compliant files</a></li>
+</ul>
+
+</article>
+
+</body>
+</html>

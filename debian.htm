@@ -1,0 +1,840 @@
+<!DOCTYPE html>
+<html lang="sl">
+<head>
+  <link href="new.css" media="screen" rel="stylesheet" />
+  <meta charset="utf-8" />
+  <meta content="Ukazi in primeri datotek za Debian" name="description" />
+  <title>Debian</title>
+</head>
+<body>
+
+<main>
+
+<h1 id="debian">Debian</h1>
+
+<p>
+Na tej podstrani zbiram ukaze in primere konfiguracijskih datotek (programov) operacijskega sistema <dfn><a href="images/debian-logo.png">Debian</a> GNU/Linux</dfn>, ki se mi zdijo uporabni.
+Nekateri ukazi zaradi morebitne zastarelosti, neposodobitve ali ukinitve ne bodo več delovali.
+</p>
+
+<article>
+
+<h2>Namestitev</h2>
+
+<p>
+Trenutno različico, pri kateri se (skoraj vsi) dodatni programi (v obliki paketov) prenesejo s spleta, je mogoče najti na naslovu <a href="https://www.debian.org/distrib/netinst" rel="nofollow" class="ssl">www.debian.org/distrib/netinst</a>.
+Slike zgoščenk starejših različic se hranijo na strani <a href="http://cdimage.debian.org/cdimage/archive/" rel="nofollow">cdimage.debian.org</a>, arhiv paketov pa na naslovu <a href="http://archive.debian.org/debian/">archive.debian.org</a>.
+</p>
+
+<h3>After installation</h3>
+
+<h4>Package management</h4>
+<p>
+Remove some packages after default <em>jessie</em> installation:
+</p>
+<pre>
+apt-get remove --purge -y man-db manpages vim-common vim-tiny
+apt-get remove --purge -y task-english wamerican
+apt-get remove --purge -y discover discover-data tasksel tasksel-data gcc-4.8-base
+apt-get remove --purge -y laptop-detect installation-report unattended-upgrades
+apt-get autoremove --purge -y
+</pre>
+
+<p>Prevent recommended and suggested packages to be installed automatically</p>
+<pre>
+cat &lt;&lt;EOF >/etc/apt/apt.conf.d/01norecommend
+APT::Install-Recommends "0";
+APT::Install-Suggests "0";
+EOF
+</pre>
+
+<p>Prevent apt-get from fetching diffs of repository</p>
+<pre>
+echo 'Acquire::PDiffs "false";' >/etc/apt/apt.conf.d/02nodiffs
+</pre>
+
+<p>Ignore translation packages</p>
+<pre>
+echo 'Acquire::Languages "0";' >/etc/apt/apt.conf.d/99no-translation
+</pre>
+
+<h4>Speed up system</h4>
+<p>Enable <samp>/tmp</samp> as <em>tmpfs</em></p>
+<pre>
+systemctl enable tmp.mount
+</pre>
+or
+<pre>
+sed -i -r "s/^#(RAMTMP=)no/\1yes/" /etc/default/tmpfs
+</pre>
+
+<p>Decrease GRUB waiting time</p>
+<pre>
+sed -i -r 's/(GRUB_TIMEOUT=)[0-9]/\11/i' /etc/default/grub
+</pre>
+
+<h4>Set system specific details</h4>
+<p>Set network configuration with static IP</p>
+<pre>
+sed -i -r 's/(iface eth0 inet )dhcp/\1static\n  address 10.82.4.18\n  netmask 255.255.255.224\n  network 10.82.4.0\n  broadcast 10.82.4.31\n  gateway 10.82.4.1/' /etc/network/interfaces
+</pre>
+
+Remove message of the day
+<pre>
+&gt; /etc/motd
+</pre>
+
+<p>Remove VTs (getty on tty2-tty6) if using systemd</p>
+<pre>
+systemctl mask getty-static.service
+</pre>
+sysv
+<pre>
+sed -i "/^[2-6]/s/^/#/" /etc/inittab
+</pre>
+
+Replace <dfn>systemd</dfn> with <dfn>sysv</dfn>
+
+</article>
+
+<article>
+<h3>Nadgraditev</h3>
+
+<p>Update the system from <dfn>jessie</dfn> release to <dfn>stretch</dfn></p>
+<pre>
+sed -i "s/jessie/stretch/g" /etc/apt/sources.list
+</pre>
+
+<p>Update the system from <dfn>wheezy</dfn> release to <dfn>jessie</dfn> release
+<pre>
+sed -i 's/wheezy/jessie/g' /etc/apt/sources.list
+[ -x /usr/bin/apt-get ] && /usr/bin/apt-get update
+</pre>
+
+</article>
+
+<article>
+
+<h2>Zvočni sistem</h2>
+
+<h3>ALSA</h3>
+<p>
+Za snemanje in predvajanje v konzoli so na voljo orodja v paketu 
+<a href="https://packages.debian.org/stable/alsa-tools" rel="nofollow" class="ssl"><dfn>alsa-tools</dfn></a>.
+</p>
+
+<dl>
+  <dt><code>arecord -f cd -t raw | oggenc - -r -q 8 -o out.ogg</code></dt>
+  <dd>snemanje v formatu <em>OGG/Vorbis</em> (potrebuje se paket <a href="https://packages.debian.org/stable/vorbis-tools" rel="nofollow" class="ssl"><dfn>vorbis-tools</dfn></a>)</dd>
+</dl>
+
+<pre>
+wget http://server/track1.mp3 -O -|madplay - -o wave:-|aplay -D hw:1,1 -
+</pre>
+
+<pre>
+modprobe snd-aloop index=1 pcm_substreams=1
+arecord -f cd -D hw:1,0 |netcat 10.82.4.60 4455
+
+netcat -l -p 4455|aplay -f cd -
+</pre>
+
+<h3>Pulseaudio</h3>
+
+<h4>Remote PA server</h4>
+<p>
+<a href="http://audal.nial.se/pulseaudio" rel="nofollow">1</a>,
+<a href="http://helpful.knobs-dials.com/index.php/Local_and_network_media_routing_notes" rel="nofollow">2</a>,
+<a href="http://wiki.openwrt.org/doc/howto/pulseaudio#server.configuration" rel="nofollow">3</a>,
+<a href="https://wiki.archlinux.org/index.php/PulseAudio/Examples" rel="nofollow">4</a>,
+<a href="http://en.gentoo-wiki.com/wiki/PulseAudio#PulseAudio_Server" rel="nofollow">5</a>
+</p>
+
+<p>
+Pred <code>pred module-hal-detect</code> se vpiše
+<code>load-module module-alsa-sink control=Master</code> in na konec doda
+</p>
+<pre>
+load-module module-native-protocol-tcp auth-ip-acl=127.0.0.1;10.82.4.0/27
+load-module module-zeroconf-publish
+</pre>
+<p>kjer je <samp>10.82.4.0/27</samp> domače omrežje.</p>
+
+</article>
+
+<article>
+<h2>Omrežje</h2>
+
+<h3>ipv4</h3>
+<pre>
+iface eth0 inet static
+  address 10.82.4.12
+  netmask 255.255.255.224
+  network 10.82.4.0
+  broadcast 10.82.4.31
+  gateway 10.82.4.1
+</pre>
+
+<h3>ipv6</h3>
+<p>Primer ročne konfiguracije za <a href="http://www.edis.at/virtuelle-root-server_82.htm" rel="nofollow">edis.at</a> KVM strežnik.</p>
+<pre>
+iface eth0 inet6 static
+  address 2a03:f80:ed15:149:154:153:154:1
+  netmask 32
+  gateway 2a03:f80:ed15::1
+  dns-nameservers 2001:4860:4860::8888 2001:4860:4860::8844
+</pre>
+
+<h3>nic bonding</h3>
+
+<p>Primer nastavitve za vzporedne povezave LACP, ki jo mora podpirati tudi omrežno stikalo.
+Na sistemu je potreben paket <a href="https://packages.debian.org/stable/ifenslave" rel="nofollow" class="ssl"><dfn>ifenslave</dfn></a>, kar namestimo z ukazom <code>apt-get install ifenslave</code>. V
+<samp>/etc/modules.d/</samp> moramo dodati
+<code>options</code></p>
+<pre>
+auto bond0
+iface bond0 inet static
+  address 10.82.4.15
+  netmask 255.255.255.224
+  network 10.82.4.0
+  broadcast 10.82.4.31
+  gateway 10.82.4.1
+  bond_mode 802.3ad
+  bond_miimon 100
+  bond_lacp_rate fast
+  slaves eth1 eth2
+</pre>
+
+<h3>vlan</h3>
+<code>apt-get install vlan</code>
+<pre>
+auto eth0 vlan1 vlan2 vlan4 vlan5 vlan10
+
+iface vlan1 inet static
+	address 192.168.4.82
+	netmask 255.255.255.0
+	network 192.168.4.0
+	vlan_raw_device eth0
+
+iface vlan2 inet static
+	address 172.16.4.139
+	netmask 255.255.255.240
+	network 172.16.4.128
+	gateway 172.16.4.129
+	vlan_raw_device eth0
+
+iface vlan4 inet static
+	address 10.82.4.13
+	netmask 255.255.255.224
+	network 10.82.4.0
+	vlan_raw_device eth0
+
+iface vlan5 inet static
+	address 10.82.4.33
+	netmask 255.255.255.224
+	network 10.82.4.32
+	vlan_raw_device eth0
+
+iface vlan10 inet static
+	address 192.168.1.2
+	netmask 255.255.255.0
+	network 192.168.1.0
+	vlan_raw_device eth0
+</pre>
+
+<h3>wlan</h3>
+
+<pre>
+apt-get install crda iw
+</pre>
+
+<pre>
+iw reg set SI
+ip link set dev wlan0 up
+iw dev wlan0 scan
+</pre>
+
+<h4>Primeri ukazov</h4>
+<dl>
+<dt><code>iwlist wlan0 scan</code></dt>
+<dd>poišče vsa brezžicna omrežja na vmesniku <samp>wlan0</samp></dd>
+<dt><pre>
+ifconfig wlan0 down
+iwconfig wlan0 mode ad-hoc essid open.wlan-si.net
+ifconfig wlan0 up</pre></dt>
+<dd>priklop v <a href="https://wlan-si.net/" class="ssl">wlan-si</a> omrežje</dd>
+</dl>
+
+<h4>Brezžično omrežje z WPA ključem</h4>
+<p>
+Potrebno je namestiti paket <a href="https://packages.debian.org/stable/wpasupplicant" rel="nofollow" class="ssl">
+<dfn>wpasupplicant</dfn></a> in v datoteko <samp>/etc/network/interfaces</samp> dodati:
+</p>
+<pre>
+auto wlan0
+iface wlan0 inet dhcp
+  wpa-ssid wirelessssid
+  wpa-psk mysecretwifipasswd
+</pre>
+
+<h4>Brezžično omrežje ad-hoc</h4>
+<pre>
+auto wlan0
+iface wlan0 inet dhcp
+  wireless-essid open.wlan-si.net
+  wireless-mode ad-hoc
+</pre>
+
+</article>
+
+<article>
+
+<h2>Strežniške aplikacije</h2>
+
+<h3>Poštni sistem postfix</h3>
+
+<p>
+<a href="https://workaround.org/ispmail/" class="ssl">Navodila (ISPmail)</a> za 
+namestitev postfix, dovecot, roundcube, mysql, amavis, clam, spamassassin. Dober
+je tudi <a href="https://wiki.gentoo.org/wiki/Complete_Virtual_Mail_Server/Postfix_to_Database" class="ssl">ta za Gentoo</a>.
+</p>
+
+<p>Če se <em>SMTP</em> ne oglaša na ipv6, je v <samp>main.cf</samp> potrebno 
+nastaviti <code>inet_protocols = all</code>.</p>
+
+<h3>dnsmasq (dns & dhcp server)</h3>
+
+<h3>BIND (dns server)</h3>
+
+<samp>/etc/bind/named.conf.local</samp>
+<pre>
+acl "servers" {
+  10.154.3.4;
+  10.238.6.1;
+  ff03:f0:e15:14:54:53:4:1;
+  ff01:1f0:c00:811::64;
+};
+zone "rs.si" {
+  type master;
+  file "/etc/bind/zones/rs_si";
+  allow-update { none; };
+  allow-transfer { "servers"; };
+  notify yes;
+};
+</pre>
+
+<p>
+Podpora za ipv6 se omogoči tako, da se v datoteko
+<samp>/etc/bind/named.conf.options</samp> dopiše <code>listen-on-v6 { any; };</code>.
+</p>
+
+<h3>mysql (podatkovna baza mySQL)</h3>
+
+<dl>
+<dt><code>CREATE DATABASE db;</code></dt>
+<dd>ustvari podatkovno bazo <samp>db</samp></dd>
+<dt><code>GRANT ALL PRIVILEGES ON db.* TO 'newuser'@'localhost' IDENTIFIED BY 'pass';</code></dt>
+<dd>dodeljevanje vseh pravic za podatkovno zbirko <samp>db</samp> k novemu uporabniku <samp>newuser</samp></dd>
+</dl>
+
+<h3>apache (web server)</h3>
+<p>Redirect from www to non-www domain</p>
+<pre>
+RewriteEngine On
+
+RewriteCond %{HTTP_HOST} ^www\.example\.com [NC]
+RewriteRule ^(.*)$ http://example.com/$1 [R=301,L]
+</pre>
+
+<p>After upgrading Apache to version 2.4 in <code>Directory</code> segment replace</p>
+<pre>
+Order Allow,Deny
+Allow from all
+</pre>
+<pre>
+Require all granted
+</pre>
+
+<h3>lighttpd (spletni strežnik)</h3>
+
+<p>Ime paketa: <dfn>lighttpd</dfn>, nastavitve: <samp>/etc/lighttpd/lighttpd.conf</samp>.</p>
+
+<h4>php support</h4>
+
+<p>Za PHP5 podporo je potrebno namestiti paket <dfn>php5-cgi</dfn> 
+<code>aptitude install php5-cgi</code>. Nato pa</p>
+<ul>
+<li>bodisi v novejši izdaji omogočiti dodatek <dfn>fastcgi-php</dfn>
+<code>lighttpd-enable-mod fastcgi-php</code></li>
+<li>bodisi omogočiti dodatek <dfn>fastcgi</dfn> <code>lighttpd-enable-mod 
+fastcgi</code> in v <samp>/etc/lighttpd/lighttpd.conf</samp> 
+dodati:
+<pre>
+fastcgi.server	= ( ".php" => ((
+			"bin-path" => "/usr/bin/php-cgi",
+			"socket" => "/tmp/php.socket"
+		)))
+</pre>
+</li>
+</ul>
+nakar servis ponovno zaženemo <code>service lighttpd restart</code>.
+
+<h4>ssl</h4>
+
+<p>To create a .pem file that lighttpd can use, concatenate your key and certificate:</p>
+<pre>cat testing.key testing.crt > certificate.pem</pre>
+<p>To server only ssl:
+<a href="http://wiki.alpinelinux.org/wiki/Lighttpd_Https_access#Configure_Lighttpd">alpinelinux lighttpd</a>
+</p>
+
+<p>redirect everything to https</p>
+<pre>
+$HTTP["scheme"] == "http" {
+    $HTTP["host"] =~ ".*" {
+        url.redirect = (".*" => "https://%0$0")
+    }
+}
+</pre>
+
+<h3>Samba</h3>
+
+<p>Install the packages and all the dependencies:
+<code>aptitude install samba samba-clients samba-vfs-modules attr</code></p>
+
+<p>Now we build the Active Directory
+<code>
+mv /etc/samba/smb.conf /root/
+samba-tool domain provision --use-rfc2307 --interactive --use-xattrs=yes
+[ -f /var/lib/samba/private/sam.ldb ]
+</code>
+</p>
+
+</article>
+
+<article>
+
+<h2>Sistem</h2>
+
+<h3>autologin</h3>
+
+<p>Normally, when you just install a plain base system you usually boot 
+to a login prompt and after you enter your username and password you get 
+the shell prompt. Now suppose we want to bypass the step where we enter 
+username and password. How do we do that?</p>
+
+<p>The first step is to install the a program called mingetty which we 
+will use instead of the regular „getty“ which is responsible for 
+generating the usual login console.</p>
+<code>aptitude install mingetty</code>
+
+<p>Edit the inittab file <samp>/etc/inittab</samp> and replace
+<code>2:23:respawn:/sbin/getty 38400 tty2</code>
+with <code>2:23:respawn:/sbin/mingetty --autologin root --noclear tty2</code></p>
+
+<h3>Serial console</h3>
+<p>
+By introducing systemd as default init system for Debian, command prompt on console (serial) doesn't work anymore.
+The solution is simple, fix <samp>/lib/systemd/system/serial-getty@.service</samp> by simple <code>sed</code> command.
+</p>
+<pre>
+sed -i "/ExecStart/s/--keep-baud/-L %I/;s/,38400,9600 %I//" /lib/systemd/system/serial-getty@.service
+</pre>
+
+<pre>
+sed -i "/ttyS0/{s/^#//;s/9600/115200/}" /etc/inittab
+</pre>
+
+<h3>syslogd</h3>
+<p>Sledeče onemogoči izpisovanje „MARK“ sporočil: <samp>/etc/default/syslogd</samp></p>
+<pre>
+SYSLOGD="-m 0"
+</pre>
+
+<h3>hdparm</h3>
+<p><samp>/etc/hdparm.conf</samp> (<a href="http://ubuntuforums.org/showthread.php?p=7385485">hdparm at Jaunty startup</a>)</p>
+<pre>
+/dev/sda {
+	apm = 127
+	spindown_time = 12
+}
+</pre>
+
+<h3>shm</h3>
+<p><samp>/etc/default/rcS</samp></p>
+<pre>
+RAMRUN=yes
+RAMLOCK=yes
+</pre>
+
+<h3>udev</h3>
+
+<p>Get attributes
+<code>udevadm info --name=/dev/video0 --attribute-walk</code> or <code>udevadm info -a -p $(udevadm info -q path -n /dev/video0)</code></p>
+
+<samp>/etc/udev/rules.d/20-video.conf</samp>
+<pre>
+KERNEL=="video[0-9]*",SUBSYSTEM=="video4linux",ATTRS{device}=="0x7133",SYMLINK+="saa7133"
+KERNEL=="video[0-9]*",SUBSYSTEM=="video4linux",ATTRS{device}=="0x036e",SYMLINK+="bt878"
+</pre>
+
+<p>Reboot and test rules</p>
+<pre>
+udevadm control --reload-rules
+udevadm test -a -p  $(udevadm info -q path -n /dev/video0)
+</pre>
+
+</article>
+
+<article>
+
+<h2>Delo s podatki</h2>
+
+<h3>mrežni datotečni sistem</h3>
+<p>Priklop mrežnega diska preko <em>cifs</em> protokola kot gost, potreben paket <dfn>cifs-utils</dfn>
+<code>mount -t cifs -o guest //wopr/share /mnt/share</code>
+
+<dl>
+<dt><code>cut /etc/passwd -d: -f1,3</code></dt>
+<dd>Izpiši prvo in tretje polje datoteke <samp>/etc/passwd</samp>, kjer so polja ločena z :</dd>
+<dt><code>du -h -s mapa</code></dt>
+<dd>Izpiši velikost mape <samp>mapa</samp></dd>
+<dt><code>du -h -d 1</code></dt>
+<dd>Izpiši velikosti prvih podmap trenutne mape</dd>
+<dt><code>stat file</code></dt>
+<dd>Izpiši podrobnosti datoteke <samp>file</samp></dd>
+<dt><code>jfs_fsck /dev/sdb1</code></dt>
+<dd>Počisti JFS datotečni sistem, v kolikor ga ni mogoče priklopiti</dd>
+</dl>
+
+<dl>
+<dt><code>dmsetup remove --force /dev/mapper/lun0</code></dt>
+<dd>Remove unavailable (zombie) volume (missing physical volume)</dd>
+<dt><code>echo 1 > /sys/block/sdb/device/delete</code></dt>
+<dd>Remove hard drive node file <code>/dev/sdb</code> from system</dd>
+</dl>
+
+<p>Formatiranje diska in izpis UUID</p>
+<pre>
+mkfs.ext4 /dev/vdb
+blkid
+</pre>
+
+<h4>oznake (tag)</h4>
+<p>Za odstranitev metapodatkov multimedijskih formatov se uporabi ukaze</p>
+<ul>
+<li><code>vorbiscomment -c /dev/null -w audio.ogg</code> (v paketu <dfn>vorbis-tools</dfn>) oziroma</li>
+<li><code>id3v2 -D audio.mp3</code> za format <em>mp3</em> (v paketu <dfn>id3v2</dfn>).</li>
+</ul>
+
+<h4>mdadm RAID</h4>
+<dl>
+  <dt><code>mdadm --create --verbose /dev/md/2 --level=raid6 --chunk=512 --raid-devices=6 --spare-devices=0 /dev/sd{a,b,c,d,e,f}2</code></dt>
+  <dd>stvaritev polja <em>raid 6</em> iz šestih particij</dd>
+  <dt><code>mdadm --fail /dev/md/2 /dev/sdc1</code></dt>
+  <dd>sprožitev izpada diska</dd>
+  <dt><code>mdadm --remove /dev/md/2 /dev/sdc1</code></dt>
+  <dd>odstranitev izpadnega diska</dd>
+  <dt><code>mdadm --add /dev/md/2 /dev/sdc1</code></dt>
+  <dd>dodajanje diska</dd>
+  <dt><code>mdadm --readwrite /dev/md1</code></dt>
+  <dd>fix auto-read-only status</dd>
+</dl>
+<ul>
+  <li><a href="http://www.devil-linux.org/documentation/1.0.x/ch01s05.html">Software Raid</a></li>
+  <li><a href="http://n0tablog.wordpress.com/howtos/software-raid-6-on-debian-etch-micro-howto/">Software RAID 6 on Debian Etch Micro-HOWTO</a></li>
+  <li><a href="http://ubuntuforums.org/showthread.php?t=408461" rel="nofollow">HOWTO: Linux Software Raid using mdadm</a></li>
+</ul>
+
+<h4>SCSI</h4>
+<p>dmesg output of an old server ~ 1990</p>
+<pre>
+Configuring Adaptec (SCSI-ID 7) at IO:330, IRQ 11, DMA priority 5
+scsi0 : Adaptec 1542
+  Vendor: FUJITSU   Model: M2266S-512        Rev: 002C
+  Type:   Direct-Access                      ANSI SCSI revision: 02
+Attached scsi disk sda at scsi0, channel 0, id 0, lun 0
+SCSI device sda: 2107704 512-byte hdwr sectors (1079 MB)
+Partition check:
+ /dev/scsi/host0/bus0/target0/lun0: p1 p2
+</pre>
+
+<h3>arhivi</h3>
+<dl>
+<dt><code>tar -xJf arch.tar.xz</code></dt>
+<dd>Razširi vsebino arhiva <samp>arch.tar.xz</samp>, zapisanega v obliki <dfn>xz</dfn></dd>
+
+<dt><code>7z x arch.7z -ofolder</code></dt>
+<dd>Razširi vsebino arhiva <samp>arch.7z</samp>, <dfn>7z</dfn>-arhiv, v mapo <samp>folder</samp></dd>
+<dt><code>unzip file.zip -d folder</code></dt>
+<dd>Razširi vsebino arhiva <samp>file.zip</samp> v mapo <samp>folder</samp></dd>
+<dt><code>zip -r file.zip folder/</code></dt>
+<dd>Stistni mapo <samp>folder</samp> v <dfn>zip</dfn>-arhiv <samp>file.zip</samp></dd>
+</dl>
+<pre>
+for i in *.zip; do
+  unzip "$i" -d "$(echo $i | sed -r 's/(.zip|.7z)*$//')/"
+done
+</pre>
+
+<pre>
+for i in *.7z; do
+  7z x "$i" -o"$(echo $i | sed -r 's/(.zip|.7z)*$//' | sed -n 's/[^_]*_[0-9]*_//p')/"
+done
+</pre>
+
+<h4>kodne tabele</h4>
+<p>Pretvaranje dokumentov iz ene kodne table v drugo, primer: iz <em>ISO-8859-1</em> v <em>UTF-8</em>
+<code>iconv -f ISO8859-1 -t UTF8 index.html -o index2.htm</code></p>
+
+<h4>kopiranje</h4>
+<code>rsync -avP -e ssh * wopr:/home/jaka/incoming/</code>
+
+<h2>Console</h2>
+
+<p>Za spremembo resolucije v konzoli se uredi <samp>/etc/default/grub</samp>:</p>
+<pre>
+GRUB_GFXMODE=1024x768
+GRUB_GFXPAYLOAD_LINUX=1024x768
+</pre>
+
+</article>
+
+<article>
+
+<h2>Kernel compiling</h2>
+
+<h4>Old way</h4>
+<code>apt-get install build-essential devscripts fakeroot kernel-package libfile-fcntllock-perl libncurses5-dev</code>
+
+<p>Get <a href="https://www.kernel.org/">kernel source</a> or use <code>apt-get source linux</code></p>
+
+Untar linux sources by <code>tar -xJf linux-3.15.1.tar.xz</code> and apply default configuration
+<pre>
+make x86_64_defconfig
+make menuconfig
+</pre>
+<p>To build kernel use <code>fakeroot</code>, enter</p>
+<code>fakeroot make-kpkg --initrd --append-to-version=-falcon --revision=2 kernel_image</code>
+
+<p>Download and untar in one line</p>
+<pre>
+wget https://www.kernel.org/pub/linux/kernel/v3.x/linux-3.18.1.tar.xz -O - |tar xJ
+</pre>
+
+<h4>New way</h4>
+<p>
+Obtain packages:
+</p>
+<pre>
+apt-get install bc dpkg-dev gcc fakeroot libc6-dev libfile-fcntllock-perl
+</pre>
+<p>
+and build kernel package:
+<code>make deb-pkg LOCALVERSION=-cc KDEB_PKGVERSION=1</code>
+</p>
+
+</article>
+
+<article>
+
+<h2>Ostalo</h2>
+
+<h4>SSH</h4>
+<p>Ustvarjanje SSH ključa <code>ssh-keygen -t rsa</code> in kopiranje na 
+oddaljeni sistem <code>ssh-copy-id remoteuser@remotesystem</code>.</p>
+<dl>
+<dt>Priklop oddaljenega sistema</dt>
+<dd><code>sshfs remoteuser@remotesystem:/home/folder/ /remotefolder/ -o uid=102,allow_other</code></dd>
+</dl>
+
+<h4>ssl</h4>
+<p>generate a new certificate request</p>
+<pre>openssl req -new -sha256 -key your-private.key -out your-domain.csr</pre>
+
+<h4>makefile</h4>
+<a href="https://www.gnu.org/software/make/manual/html_node/Text-Functions.html" rel="nofollow">string substitution</a>,
+<a href="http://www.chemie.fu-berlin.de/chemnet/use/info/make/make_7.html" rel="nofollow">conditionals</a>,
+<a href="http://www.chemie.fu-berlin.de/chemnet/use/info/make/make_15.html" rel="nofollow">quick reference</a>
+
+<h4>Ostalo ostalega</h4>
+
+<code>dpkg -l</code>
+<code>setxkbmap -layout us</code>
+<pre>mkvmerge --title "Title" -o "Output.mkv" --language 0:eng --default-track 0:0 Subtitles.srt -a 3 --language 1:und --language 3:eng --default-track 3:1 Input.mkv</pre>
+
+<p>Check ssh service on port 22</p>
+<code>nmap -sV --open -p 22 192.168.60.0/24</code>
+
+<p>Enable colors in git output (usefull in <samp>git diff</samp> mode)
+<code>git config --global color.ui auto</code></p>
+
+<h4>motd</h4>
+<p>Generate ascii art <a href="http://patorjk.com/software/taag/#p=display&amp;f=Elite">here</a>,
+<a href="http://www.linuxquestions.org/questions/linux-software-2/adding-colors-to-your-motd-105038/">colors</a>,
+<a href="http://wiki.bash-hackers.org/scripting/terminalcodes">terminal codes</a></p>
+<pre>
+[user@box]$ echo -en "\033[1;34m" > /etc/motd
+[user@box]$ echo "Text of your motd file....." >> /etc/motd
+[user@box]$ echo -en "\033[0m" >> /etc/motd
+</pre>
+
+</article>
+
+<h1 id="ubuntu">Ubuntu</h1>
+
+<article>
+
+<h2>Namestitev</h2>
+
+<p>
+Za namestitev operacijskega sistema Ubuntu preko lokalne mreže in spleta si oglejte sledeče povezave:
+</p>
+<ul>
+  <li><a href="https://help.ubuntu.com/community/Installation/QuickNetboot">QuickNetboot</a></li>
+  <li><a href="http://www.tjansson.dk/?p=259">PXE install of Ubuntu on a Lenovo Thinkpad X200</a></li>
+  <li><a href="http://hiden.org/sysadmin/building-a-ubuntu-pxe-install-server/">Building a Ubuntu PXE Install Server</a></li>
+</ul>
+<p>Paket mrežne namestitve veje <dfn>Jaunty</dfn> dobite na <a 
+href="http://archive.ubuntu.com/ubuntu/dists/jaunty/main/installer-i386/current/images/netboot/netboot.tar.gz">Ubuntu 
+archive</a>. Ostali so dostopni na <a href="http://cdimage.ubuntu.com/netboot/" 
+rel="nofollow">http://cdimage.ubuntu.com/netboot/</a></p>
+
+</article>
+
+<article>
+
+<h2>Video sistem V4L</h2>
+
+<p>Večina dokumentacije se nahaja na uradni strani <a href="http://www.linuxtv.org/wiki/index.php/Main_Page">V4L</a>.</p>
+<p>Trenutno uporabljam PCI DVB-T sprejemnik <a href="http://www.linuxtv.org/wiki/index.php/Hauppauge_WinTV-HVR-1120">HVR 1120</a>, ki je podprt v Ubuntu različici <dfn>Lucid Lynx</dfn>. Gonilnike sem namestil z</p>
+<pre>
+mkdir /root/hvr1120/
+cd /root/hvr1120/
+wget http://steventoth.net/linux/hvr1200/HVR-12x0-14x0-17x0_1_25_25271_WHQL.zip
+wget http://steventoth.net/linux/hvr1200/extract.sh
+apt-get install unzip
+sh extract.sh
+mv v4l-cx23885-enc.fw /lib/firmware
+mv v4l-cx23885-avcore-01.fw /lib/firmware
+mv dvb-fe-tda10048-1.0.fw /lib/firmware
+</pre>
+
+<h4>Uporaba:</h4>
+<dl>
+  <dt><code>mencoder tv:// -tv driver=v4l2:device=/dev/video0:input=1:norm=pal:width=720:height=576:alsa:adevice=hw.0,0:forceaudio:buffersize=64 -noskip -of avi -ofps 25 -aspect 4:3 -ovc raw -oac pcm -o /home/tv_$(date +%Y.%m.%d_%H%M%S).avi</code></dt>
+  <dd>snemanje iz <em>RCA</em> oziroma <em>Line in</em> vhoda v <em>raw</em> oziroma <em>pcm</em> formatu</dd>
+  <dt>
+<pre>
+amixer -c 0 sset 'Capture',0 35%,35% cap
+amixer -c 0 sset 'Capture',1 0%,0% nocap
+amixer -c 0 sset 'Input Source',0 'Line'
+mencoder tv:// -tv driver=v4l2:device=/dev/video0:input=1:norm=pal:width=720:height=576:outfmt=bgr24:alsa:adevice=hw.0,0:forceaudio:buffersize=64 -noskip -of avi -ofps 25 -aspect 4:3 -ovc lavc -lavcopts vcodec=ffv1 -oac pcm -af channels=1:1:0:0 -info srcform="video8" -o /home/tv_$(date +%Y.%m.%d_%H%M%S).avi -force-avi-aspect 4/3
+</pre>
+<dt>
+  <dd>primer za presnemavanje videokaset, enokanalni zvok</dd>
+</dl>
+
+<h3>dvb-t</h3>
+<p>Kanale (bolje rečeno programe) se poišče z ukazom 
+<code>w_scan -c SI -C UTF-8 -X</code> (iz paketa <a 
+href="https://packages.debian.org/stable/w-scan" class="ssl">
+<dfn>w-scan</dfn></a>, več podatkov v
+<a href="http://www.linuxtv.org/wiki/index.php/W_scan">dokumentaciji</a>),
+in se shranijo v datoteko <samp>channels.conf</samp>, kjer so navedeni
+programi s frekvenco in <em>pnr</em>. Primer teh datotek: 
+leto 2015: <a href="dvb/2015_channels.conf"><samp>channels.conf</samp></a>,
+leto 2014: <a href="dvb/2014_channels.conf"><samp>channels.conf</samp></a>,
+leto 2012: <a href="dvb/2012_channels.conf"><samp>channels.conf</samp></a>,
+leto 2010: <a href="dvb/2010_channels.conf"><samp>channels.conf</samp></a>.
+
+<p>Kakovost signala in motnje se preverijo z ukazom</p>
+<pre>
+tzap -r -c channels.conf "SLO3(RTV SLOVENIJA)" -a 0
+</pre>
+<p>iz paketa dvb-apps.</p>
+
+<h3>dvb-s</h3>
+<p>Astra</p>
+<pre>w_scan -fs -s S19E2 -R 0 -E 0 -C UTF-8 -X &gt; astra_free.conf</pre>
+
+<h3>dvb-c</h3>
+<p>Na „kabelski televiziji“ se kanale poišče z ukazom <code>w_scan -fc -c SI -R 0 -C UTF-8 -X &gt; channels.conf</code></p>
+
+<h4>Streaming</h4>
+<pre>
+mkfifo /root/pipeline
+mplayer tv:// -tv driver=v4l2:device=/dev/video0:input=1:norm=pal:width=720:height=576:noaudio -nosound -nolirc -noconsolecontrols -vo yuv4mpeg:file=/root/pipeline 2>&amp;1 > /dev/null &amp;
+avconv -f yuv4mpegpipe -i /root/pipeline -c:v mpeg2video -b 2000k -an -aspect 4:3 -f mpegts udp://10.82.4.12:1234
+</pre>
+
+<pre>
+avconv -f video4linux2 -channel 1 -video_size 640x480 -input_format yuv420p -i /dev/video0 -vf format=gray -c:v mpeg2video -b 1000k -r 25 -an -aspect 4:3 -f mpegts udp://10.82.4.6:1234
+</pre>
+
+<pre>
+avconv -f video4linux2 -channel 1 -video_size 720x576 -input_format yuv420p -i /dev/video0 -c:v mpeg2video -b:v 1000k -r 25 -metadata service_provider="Webcam" -aspect 4:3 -f mpegts udp://10.82.4.26:1234 2>&amp;-
+</pre>
+
+</article>
+
+<article>
+
+<h2>xwindows</h2>
+
+<p>How to export DISPLAY as environment variable?<br />
+Usualy this is done by <code>export DISPLAY=:0.0</code>.
+Moreover <code>DISPLAY=:0</code>means the first GPU in the system,
+<code>DISPLAY=:0.0</code> means the first configured screen, while
+<code>DISPLAY=:0.1</code> means the second configured screen in the system.
+
+</p>
+
+<h2>Gnome</h2>
+
+<p>Default keyboard shortcut to switch between desktops: Ctrl+Alt+Left (Right) Key</p>
+
+<h3>Gnome interface</h3>
+
+<h4>Show icons on desktop</h4>
+<code>gsettings set org.gnome.desktop.background show-desktop-icons true</code>
+
+<h4>Move minimize, maximize and close button to right</h4>
+<code>gconftool --type string -s /apps/metacity/general/button_layout "menu:minimize,maximize,close"</code>
+<code>gsettings set org.gnome.desktop.wm.preferences button-layout 'menu:minimize,maximize,close'</code>
+<p><img src="images/debian-helloworld.png" alt="Hello World GTK example" /></p>
+
+<h4>Change GTK theme</h4>
+<code>gsettings set org.gnome.desktop.interface gtk-theme 'Adwaita'</code>
+<code>gconftool -s -t string /desktop/gnome/interface/gtk_theme "Ambiance"</code>
+
+<p>Remove Emacs keybindings in Gnome</p>
+<code>gsettings set org.gnome.desktop.interface gtk-key-theme Default</code>
+<code>gconftool -s -t string /desktop/gnome/interface/gtk_key_theme "Default"</code>
+
+<p>Set DMZ cursor theme</p>
+<code>gsettings set org.gnome.desktop.interface cursor-theme 'DMZ-White'</code>
+
+<h4>Change Metacity theme</h4>
+<p>Install openSUSE Gilouche Theme <code>aptitude install gnome-theme-gilouche</code> and apply theme
+<code>gsettings set org.gnome.desktop.wm.preferences theme 'Gilouche'</code>
+<code>gconftool-2 -s -t string /apps/metacity/general/theme "Gilouche"</code></p>
+
+<h4>Show address/path in Nautilus</h4>
+<code>gsettings set org.gnome.nautilus.preferences always-use-location-entry true</code>
+<p><img src="images/debian-gnomenautilus.png" alt="Gnome Nautilus location field" /></p>
+
+</article>
+
+<h2>Links</h2>
+<p>
+<a href="http://linux.icydog.net/ssh/piping.php" rel="nofollow">Piping with SSH</a>
+<a href="http://www.astrouw.edu.pl/~jskowron/tar-ssh/" rel="nofollow">Remote TAR</a>
+<a href="http://www.cyberciti.biz/tips/bash-shell-parameter-substitution-2.html" rel="nofollow">Bash parameter substitution</a>
+<a href="http://www.hep.by/gnu/autoconf/Shell-Substitutions.html" rel="nofollow">Bash substitution</a>
+<a href="http://willhaley.com/blog/create-a-custom-debian-live-environment/">Create a Custom Debian Live Environment</a>
+</p>
+
+</main>
+
+</body>
+</html>

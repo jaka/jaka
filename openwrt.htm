@@ -1,0 +1,306 @@
+<!DOCTYPE html>
+<html lang="sl">
+<head>
+  <link href="new.css" media="screen" rel="stylesheet" />
+  <meta charset="utf-8" />
+  <meta content="Nekaj podatkov o operacijskem sistemu OpenWrt" name="description" />
+  <title>OpenWrt</title>
+</head>
+<body>
+
+<main>
+
+<h1>OpenWrt</h1>
+
+<p>
+Openwrt je operacijski sistem osnovan na Linux jedru ter standardni knjižnici C <dfn>musl</dfn>.
+Uradna spletna stran projekta se nahaja na spletni strani <a href="https://openwrt.org" class="ssl" rel="nofollow">openwrt.org</a>.
+</p>
+
+<p>
+Zadnja stabilna izdaja sistema je <a href="https://downloads.openwrt.org/chaos_calmer/15.03/" 
+class="ssl">Chaos Calmer 15.05</a>, izdana 2. septembra 2015.
+Prihaja tudi Designated Drive xx.yy. Sistem podpira <a href="https://wiki.openwrt.org/toh/start" class="ssl">več ali manj naprav</a>.
+</p>
+
+<article>
+
+<h2 id="buildroot">Buildroot</h2>
+
+<h3>Chaos Calmer</h3>
+
+<p>
+This version needs all the packages specified below for Barrier Breaker and in addition also <code>libssl-dev</code>.
+</p>
+
+<pre>
+cd ~
+mkdir {dl-,}ChaosCalmer
+cd ChaosCalmer
+git clone git://git.openwrt.org/15.05/openwrt.git .
+ln -s ../dl-ChaosCalmer dl
+./scripts/feeds update -a
+./scripts/feeds install -a
+make defconfig
+make prereq
+make menuconfig
+</pre>
+
+<h3>Barrier Breaker</h3>
+
+<p>
+Firstly, Debian 7 needs the following list of packages in order to successfully build image.
+</p>
+<code>file g++ gawk gcc libncurses5-dev python2.7-minimal subversion unzip zlib1g-dev</code>
+
+<p>
+Secondly, create directories, download the source and start configuring target system
+</p>
+<pre>
+cd ~
+mkdir {dl-,}BarrierBreaker
+cd BarrierBreaker
+git clone git://git.openwrt.org/14.07/openwrt.git .
+ln -s ../dl-BarrierBreaker dl
+## Add individual package not present in openwrt repository
+# ./scripts/feeds update -a
+# ./scripts/feeds install olsrd
+## Specify target platform
+make defconfig
+make prereq
+make menuconfig
+</pre>
+<p>
+Finally, to build images, simply run <code>make</code> command. Built images (to be flashed to devices) will be located in <samp>bin/</samp> directory.
+</p>
+
+<h3>Configuration</h3>
+
+<p>Buildroot needs some configuration; at least you should specify device CPU arhitecture.</p>
+
+<h5>TP-WR741</h5>
+<pre>
+echo -e "CONFIG_TARGET_ar71xx=y\nCONFIG_TARGET_ar71xx_generic_TLWR741=y" > .config
+</pre>
+
+<h5>Alix board</h5>
+<pre>
+Target System: x86
+Subtarget: PCEngines alix2
+</pre>
+
+<pre>
+make MAKEOVERRIDES='' defconfig
+</pre>
+
+<h2>Image Generator</h2>
+
+<p>
+Instead of building each Openwrt package (binary) from its source as it is done by <a href="#buildroot">Buildroot</a> process,
+precompiled environments are available for each architecture, see 
+<a href="https://wiki.openwrt.org/doc/howto/obtain.firmware.generate" class="ssl" rel="nofollow">Image Generator</a>.
+</p>
+
+<p>Download the Barrier Breaker's <a href="https://downloads.openwrt.org/barrier_breaker/14.07/ar71xx/generic/OpenWrt-ImageBuilder-ar71xx_generic-for-linux-x86_64.tar.bz2" class="ssl">ImageBuilder for ar71xx</a>.</p>
+<pre>
+cd ~
+mkdir openwrt && cd openwrt
+wget https://downloads.openwrt.org/barrier_breaker/14.07/ar71xx/generic/OpenWrt-ImageBuilder-ar71xx_generic-for-linux-x86_64.tar.bz2
+tar -xjf OpenWrt-ImageBuilder-ar71xx_generic-for-linux-x86_64.tar.bz2
+mv OpenWrt-ImageBuilder-ar71xx_generic-for-linux-x86_64 ImageBuilder-ar71xx
+cd ImageBuilder-ar71xx
+</pre>
+
+<h3>Examples of Image Generator</h3>
+
+<p>
+I have <a href="https://github.com/jaka/openwrt-configuration" class="ssl">some configuration files</a> that could be included into image on my Github.
+</p>
+
+<h5>TL-WR741</h5>
+<pre>
+make image PROFILE=TLWR741 DEVICE_TYPE= PACKAGES="-wpad-mini -ip ip-full gre kmod-gre wpad iptables" FILES="files/"
+</pre>
+
+<h5>TL-WR743</h5>
+<p>Hardware version: 2.1 and software version: 3.14.3 Build 130318 Rel.61337n <u>works</u> with Barrier Breaker (r42625).</p>
+<pre>
+make image PROFILE=TLWR743 DEVICE_TYPE= PACKAGES="iptables"
+</pre>
+
+<h5>TL-WR703N</h5>
+<p>One with original build 130321 and firmware release 37153n <u>works</u> with Barrier Breaker (r42625)</p>
+<pre>
+make image PROFILE=TLWR703 DEVICE_TYPE= PACKAGES="iptables kmod-usb-serial-pl2303"
+</pre>
+
+<h2>Installation to device</h2>
+
+<p>
+Usually consumer grade devices are equiped with some interface, eg. website, with system upgrade option. 
+</p>
+
+<h4>CF card</h4>
+
+<p>If your CF card is accessible via <samp>/dev/sdc</samp>, run:</p>
+<pre>
+cd bin/x86/
+gunzip openwrt-x86-alix2-combined-ext4.img.gz
+dd if=openwrt-x86-alix2-combined-ext4.img of=/dev/sdc
+</pre>
+
+<h2>Upgrade</h2>
+
+<p>Download new firmware image (<dfn>.trx</dfn> file) to ramdisk (into <samp>/tmp/</samp> directory) and run
+<code>sysupgrade -v /tmp/newfirmware.trx</code>
+(<s>mtd write /tmp/newfirmware.trx linux</s>). Reboot.</p>
+
+<p>Or if using x86 target, e.g. Alix, with CF card</p>
+<pre>
+gunzip openwrt-x86-alix2-combined-ext4.img.gz
+sysupgrade -v -n /tmp/openwrt-x86-alix2-combined-ext4.img
+</pre>
+
+<h2>Configuration</h2>
+
+<h3>System</h3>
+
+<p>
+If you are using the ext2 filesystem on a CF card, you should limit 
+write cycles by modifying <samp>/sbin/mount_root</samp> as follows.
+</p>
+<pre>
+mount -o remount,rw,noatime,nodiratime /dev/root /
+</pre>
+<p>
+This will slightly reduce the number of writting cycles.
+</p>
+
+<h4>Network</h4>
+
+<h5>Wired IEEE 802.1X</h5>
+
+<p>If you need IEEE 802.1X wired authentication, install package <a 
+href="http://hostap.epitest.fi/wpa_supplicant/"><dfn>wpa_supplicant</dfn></a>
+and edit <samp>/etc/rc.local</samp> as:</p>
+
+<pre>
+date -s 201101200000
+wpa_supplicant -Dwired -ieth2 -c/etc/wpa_supplicant.conf &
+sleep 1
+#udhcpc -i eth2 -q -A 3 &
+ifconfig eth2 192.168.110.110 netmask 255.255.255.128
+route add default gw 192.168.110.1
+iptables -t nat -A POSTROUTING -o eth2 -j MASQUERADE
+iptables -t nat -A PREROUTING -i eth2 -p tcp --dport 22 -j DNAT --to 10.0.12.2:22
+</pre>
+
+<p>or in case of WRT54GL:</p>
+
+<pre>
+date -s 052000002010
+wpa_supplicant -D roboswitch -i eth0.1 -p multicast_only=1 -c /etc/wpa_supplicant.conf &
+sleep 3
+udhcpc -i eth0.1 -q -A 3 &
+#iptables -t nat -A POSTROUTING -o eth0.1 -j MASQUERADE
+</pre>
+
+<p></p>
+
+<h5>bridge</h5>
+<pre>
+brctl addbr gbridge
+brctl addif gbridge eth1
+brctl addif gbridge eth2
+ifconfig eth2 0.0.0.0
+ifconfig eth1 0.0.0.0
+ifconfig gbridge 10.82.4.1 netmask 255.255.255.224 broadcast 10.82.4.31 up
+</pre>
+
+<h5>dnsmasq</h5>
+
+<p><samp>/etc/dnsmasq.conf</samp></p>
+<pre>
+dhcp-authoritative
+dhcp-range=eth1,10.10.31.2,10.10.31.30,255.255.255.224,48h
+dhcp-range=eth0,10.0.12.4,10.0.12.10,255.255.255.240,6h
+dhcp-leasefile=/tmp/dhcp.leases
+dhcp-option=eth1,3,10.10.31.1
+dhcp-option=eth0,3,10.0.12.1
+dhcp-option=eth1,6,193.2.1.66
+dhcp-option=eth0,6,193.2.1.66
+dhcp-host=00:00:00:4f:33:49,10.0.12.2,48h
+</pre>
+
+<pre>
+dhcp-boot="/pxelinux.0",eser,10.82.4.13
+local-ttl=1
+addn-hosts=/jffs/hosts
+server=/10.in-addr.arpa/10.82.4.14
+server=/network.local/10.82.4.14
+address=/local.debian.org/10.82.4.15
+</pre>
+
+<p>If you want to redirect all queries for domain 
+<dfn>integral.local</dfn> to DNS server at <dfn>192.168.1.2</dfn>, add 
+second line to <samp>/etc/config/dhcp</samp></p>
+<pre>
+list	'addnhosts'	'/etc/hosts2'
+list	'server'	'/integral.local/192.168.1.2'
+</pre>
+
+<h5>Uporaba:</h5>
+<dl>
+<dt><code>dhcp-range=[net device],[start ip],[stop ip],[netmask],[lease time]</code></dt>
+<dt><code>dhcp-option=[net device],3,[gateway ip]</code></dt>
+<dt><code>dhcp-option=[net device],6,[dns server ip]</code></dt>
+<dd></dd>
+</dl>
+
+
+<h2>Troubleshooting</h2>
+
+<h4>failsafe boot</h4>
+<p>Več na <a href="http://wiki.openwrt.org/doc/howto/generic.failsafe#triggering.via.hardware.button.standard.openwrt.method" rel="nofollow">OpenWrt Failsafe</a></p>
+<pre>
+telnet 192.168.1.1
+mount_root
+passwd
+</pre>
+
+<h2>Older stuff</h2>
+
+<h3>AttitudeAdjustment</h3>
+<p>V okolju <a href="https://www.debian.org/releases/wheezy/" rel="nofollow" class="ssl">Debian 7 (<em>wheezy</em>)</a> je potrebno 
+naložiti pakete <dfn>build-essential gawk git-core libncurses5-dev python subversion unzip 
+zlib1g-dev</dfn>.</p>
+<pre>
+mkdir AttitudeAdjustment
+mkdir dl-AttitudeAdjustment
+ln -s ../dl-AttitudeAdjustment AttitudeAdjustment/dl
+cd AttitudeAdjustment
+svn checkout svn://svn.openwrt.org/openwrt/branches/attitude_adjustment .
+make defconfig
+make prereq
+make menuconfig
+make
+</pre>
+
+<h3>Backfire</h3>
+<p>V okolju <a href="debian.htm#debian">Debian</a> veje <dfn>Lenny</dfn> 
+se potrebuje pakete: <dfn>build-essential gawk libncurses5-dev 
+python-minimal subversion unzip zlib1g-dev</dfn>.</p>
+<pre>mkdir ~/backfire/
+mkdir ~/dl-backfire/
+cd ~/backfire/
+ln -s ~/dl-backfire/ dl
+svn checkout svn://svn.openwrt.org/openwrt/tags/backfire_10.03 .
+make menuconfig
+make</pre>
+
+</article>
+
+</main>
+
+</body>
+</html>

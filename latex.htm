@@ -1,0 +1,118 @@
+<!DOCTYPE html>
+<html lang="sl">
+<head>
+  <link href="new.css" media="screen" rel="stylesheet" />
+  <meta charset="utf-8" />
+  <meta content="Informacije o podpori slovenščine v programskem paketu Latex" name="description" />
+  <title>Latex in slovenščina</title>
+</head>
+<body>
+
+<main>
+
+<h1>Latex in slovenščina</h1>
+
+<article>
+
+<h2>Slovenščina</h2>
+
+<h3>Zapisovanje črk</h3>
+<p>
+Šumnike je mogoče vnašati po starejšem načinu, kjer se pred znakom brez 
+strešice, torej sičniku, doda narekovaj &quot;, kar se nato prevede v 
+ustrezne šumnike. Z modernizacijo sistema <em>Latex</em> se je podprl 
+standard <em>UTF-8</em>, ki omogoča vnašanje znakov tako črk šumnikov kot tudi vseh
+drugih črk neposredno v samo datoteko. Seveda obstajajo tudi drugi standardi, 
+ki prav tako omogočajo takšen vnos znakov, kot je naprimer 
+<em>Windows 1250</em>, vendar se zaradi slabe kompatibilnosti 
+programske opreme in neprenosljivosti njihova uporaba odsvetuje.
+</p>
+
+<p>
+Pomembno je tudi pravilno deljenje besed in ustrezen prevod izrazov, kar 
+nam omogoča paket <dfn>Babel</dfn>.
+</p>
+
+<p>
+Vse to dosežemo, če na začetek datoteke dodamo naslednji vrstici.
+</p>
+<pre>
+\usepackage[slovene]{babel} 
+\usepackage[utf8]{inputenc} 
+</pre>
+<p>
+Nato poskrbimo, da je tudi zapisovanje znakov v urejevalniku nastavljeno na
+<em>UTF-8</em>. Primer za <a href="http://pub.kel.si/share/Pictures/Computers/Software/Windows%207/Notepad++%20UTF8.png">Notepad ++</a>.
+</p>
+
+</article>
+
+<article>
+
+<h3>Prikazovanje črk</h3>
+
+<p>
+Poleg načina zapisovanja znakov v datoteki <samp>.tex</samp> obstaja tudi 
+nekaj načinov prikazovanja črk.
+</p>
+
+<p>
+Privzet prikaz znankov je <em>OT1</em>, na katerem temelji pisava 
+<em>Computer Modern</em> in vsebuje le 128 različnih znakov. Ker 
+večino znakov zasedajo ASCII črke, morajo biti preostale črke sestavljene 
+zgolj iz teh 128 osnovnih znakov, kar pomeni, da je črka z naglasom
+predstavljena z dvema znakoma; osnovno črko in naglasom.
+</p>
+
+<p>
+Čeprav je prikaz sestavljene črke tako dovršen, da se same sestave ne vidi, 
+ima takšen pristop precej omejitev. Iskanje po besedah, ki 
+vsebujejo sestavljene črke, ni mogoče. Prav tako ni mogoče takšnih
+besed skopirati.
+</p>
+
+<p>
+Delna rešitev je uporaba prikaza znakov <em>T1</em>, ki podpira 256
+različnih znakov, in pisavo <em>Latin Modern</em> (<samp>lmodern</samp>).
+</p>
+
+<pre>
+\usepackage[T1]{fontenc}
+\usepackage{lmodern}
+</pre> 
+
+</article>
+
+<article>
+
+<h2>Splošni skelet</h2>
+
+<p><a href="https://github.com/jaka/latex-header" rel="nofollow" class="ssl">latex-header@github</a>, <a href="latex/skeleton.pdf">preview</a></p>
+<p><code>git clone https://github.com/jaka/latex-header.git .</code></p>
+
+</article>
+
+<h3>Opomba</h3>
+
+<p>Nekateri urejevalniki datotek (na primer <em>Notepad++</em>) na začetek datoteke 
+postavijo ti. <a href="http://unicode.org/faq/utf_bom.html#bom1"><em>BOF</em></a>
+(beginning of file). Ker tega <dfn>Latex</dfn> prevajalnik ne razume, 
+se lahko zgodi, da se datoteka ne bo prevedla.</p>
+
+</main>
+
+<article>
+
+<h3>Povezave</h3>
+
+<nav>
+<ul>
+  <li><a href="https://en.wikibooks.org/wiki/LaTeX/Mathematics#List_of_Mathematical_Symbols" class="ssl" rel="nofollow">Seznam matematičnih simbolov</a></li>
+  <li><a href="https://en.wikibooks.org/wiki/LaTeX" class="ssl">Wikiknjiga o sistemu Latex (v angleščini)</a></li>
+</ul>
+</nav>
+
+</article>
+
+</body>
+</html>
